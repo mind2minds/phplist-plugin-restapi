@@ -8,7 +8,7 @@ class Subscribers
 {
     /**
      * Get all the Subscribers in the system.
-     * 
+     *
      * <p><strong>Parameters:</strong><br/>
      * [order_by] {string} name of column to sort, default "id".<br/>
      * [order] {string} sort order asc or desc, default: asc.<br/>
@@ -37,7 +37,7 @@ class Subscribers
         if ($limit > 100) {
             $limit = 100;
         }
-       
+
         $params = array (
             'order_by' => array($order_by,PDO::PARAM_STR),
             'order' => array($order,PDO::PARAM_STR),
@@ -50,7 +50,7 @@ class Subscribers
 
     /**
      * Get the total of Subscribers in the system.
-     * 
+     *
      * <p><strong>Parameters:</strong><br/>
      * none
      * </p>
@@ -65,7 +65,7 @@ class Subscribers
 
     /**
      * Get one Subscriber by ID.
-     * 
+     *
      * <p><strong>Parameters:</strong><br/>
      * [*id] {integer} the ID of the Subscriber.<br/>
      * </p>
@@ -81,7 +81,7 @@ class Subscribers
         if (!is_numeric($id) || empty($id)) {
             Response::outputErrorMessage('invalid call');
         }
-        
+
         $params = array(
             'id' => array($id,PDO::PARAM_INT),
         );
@@ -90,7 +90,7 @@ class Subscribers
 
     /**
      * Get one Subscriber by email address.
-     * 
+     *
      * <p><strong>Parameters:</strong><br/>
      * [*email] {string} the email address of the Subscriber.<br/>
      * </p>
@@ -111,7 +111,7 @@ class Subscribers
 
     /**
      * Get one Subscriber by foreign key.
-     * 
+     *
      * <p><strong>Parameters:</strong><br/>
      * [*foreignkey] {string} the foreign key of the Subscriber.<br/>
      * </p>
@@ -132,7 +132,7 @@ class Subscribers
 
     /**
      * Add one Subscriber.
-     * 
+     *
      * <p><strong>Parameters:</strong><br/>
      * [*email] {string} the email address of the Subscriber.<br/>
      * [*confirmed] {integer} 1=confirmed, 0=unconfirmed.<br/>
@@ -149,7 +149,7 @@ class Subscribers
     public static function subscriberAdd()
     {
         $sql = 'INSERT INTO '.$GLOBALS['tables']['user'].'
-          (email, confirmed, foreignkey, htmlemail, password, passwordchanged, subscribepage, disabled, entered, uniqid) 
+          (email, confirmed, foreignkey, htmlemail, password, passwordchanged, subscribepage, disabled, entered, uniqid)
           VALUES (:email, :confirmed, :foreignkey, :htmlemail, :password, now(), :subscribepage, :disabled, now(), :uniqid);';
 
         $encPwd = Common::encryptPassword($_REQUEST['password']);
@@ -157,7 +157,7 @@ class Subscribers
         if (!validateEmail($_REQUEST['email'])) {
             Response::outputErrorMessage('invalid email address');
         }
-        
+
         try {
             $db = PDO::getConnection();
             $stmt = $db->prepare($sql);
@@ -178,10 +178,10 @@ class Subscribers
             Response::outputError($e);
         }
     }
-    
+
     /**
      * Add a Subscriber with lists.
-     * 
+     *
      * <p><strong>Parameters:</strong><br/>
      * [*email] {string} the email address of the Subscriber.<br/>
      * [*foreignkey] {string} Foreign key.<br/>
@@ -195,8 +195,8 @@ class Subscribers
      */
     public static function subscribe()
     {
-        $sql = 'INSERT INTO '.$GLOBALS['tables']['user'].' 
-          (email, htmlemail, foreignkey, subscribepage, entered, uniqid) 
+        $sql = 'INSERT INTO '.$GLOBALS['tables']['user'].'
+          (email, htmlemail, foreignkey, subscribepage, entered, uniqid)
           VALUES (:email, :htmlemail, :foreignkey, :subscribepage, now(), :uniqid);';
 
         $uniqueID = Common::createUniqId();
@@ -204,10 +204,10 @@ class Subscribers
         if (!validateEmail($_REQUEST['email'])) {
             Response::outputErrorMessage('invalid email address');
         }
-        
+
         $listNames = '';
         $lists = explode(',',$_REQUEST['lists']);
-        
+
         try {
             $db = PDO::getConnection();
             $stmt = $db->prepare($sql);
@@ -228,7 +228,7 @@ class Subscribers
             }
             $subscribeMessage = getUserConfig("subscribemessage:$subscribePage", $subscriberId);
             $subscribeMessage = str_replace('[LISTS]',$listNames,$subscribeMessage);
-            
+
             $subscribePage = sprintf('%d',$_REQUEST['subscribepage']);
             sendMail($_REQUEST['email'], getConfig("subscribesubject:$subscribePage"), $subscribeMessage );
             addUserHistory($_REQUEST['email'], 'Subscription', 'Subscription via the Rest-API plugin');
@@ -237,10 +237,10 @@ class Subscribers
         } catch (\Exception $e) {
             Response::outputError($e);
         }
-    } 
+    }
     /**
      * Update one Subscriber.
-     * 
+     *
      * <p><strong>Parameters:</strong><br/>
      * [*id] {integer} the ID of the Subscriber.<br/>
      * [*email] {string} the email address of the Subscriber.<br/>
@@ -257,7 +257,7 @@ class Subscribers
     public static function subscriberUpdate()
     {
         $sql = 'UPDATE '.$GLOBALS['tables']['user'].' SET email=:email, confirmed=:confirmed, htmlemail=:htmlemail WHERE id=:id;';
-        
+
         $id = sprintf('%d',$_REQUEST['id']);
         if (empty($id)) {
             Response::outputErrorMessage('invalid call');
@@ -279,7 +279,7 @@ class Subscribers
 
     /**
      * Delete a Subscriber.
-     * 
+     *
      * <p><strong>Parameters:</strong><br/>
      * [*id] {integer} the ID of the Subscriber.<br/>
      * </p>
@@ -304,4 +304,73 @@ class Subscribers
             Response::outputError($e);
         }
     }
+
+   /**
+     * Get all the Subscribers in the system with extra attributes.
+     *
+     * <p><strong>Parameters:</strong><br/>
+     * [order_by] {string} name of column to sort, default "id".<br/>
+     * [order] {string} sort order asc or desc, default: asc.<br/>
+     * [limit] {integer} limit the result, default 100 (max 100)<br/>
+     * [offset] {integer} offset of the result, default 0.<br/>
+     * [attributes] {string} comma delimits attributes name if empty then return all available attributes else fetch only specified attributes
+     * </p>
+     * <p><strong>Returns:</strong><br/>
+     * List of Subscribers.
+     * </p>
+     */
+    public static function subscribersGetWithAttributes($order_by = 'id', $order = 'asc', $limit = 100, $offset = 0, $attributes = '')
+    {
+
+        if (isset($_REQUEST['order_by']) && !empty($_REQUEST['order_by'])) {
+            $order_by = $_REQUEST['order_by'];
+        }
+        if (isset($_REQUEST['order']) && !empty($_REQUEST['order'])) {
+            $order = $_REQUEST['order'];
+        }
+        if (isset($_REQUEST['limit']) && !empty($_REQUEST['limit'])) {
+            $limit = $_REQUEST['limit'];
+        }
+        if (isset($_REQUEST['offset']) && !empty($_REQUEST['offset'])) {
+            $offset = $_REQUEST['offset'];
+        }
+
+        if (isset($_REQUEST['attributes']) && !empty($_REQUEST['attributes'])) {
+            $attributes = $_REQUEST['attributes'];
+        }
+
+
+        // if ($limit > 100) {
+        //     $limit = 100;
+        // }
+
+        if(!empty($attributes)){
+            $attributes = explode(",", $attributes);
+        }
+
+        // NOT TAKING INT VALUES THUS COMMENTED HERE
+        // $params = array (
+        //     'order_by' => array($order_by,PDO::PARAM_STR),
+        //     'order' => array($order,PDO::PARAM_STR),
+        //     'limit' => array($limit,PDO::PARAM_INT),
+        //     'offset' => array($offset,PDO::PARAM_INT)
+        // );
+
+        $sql = "SELECT * FROM " . $GLOBALS['tables']['user'] . " ORDER BY $order_by $order LIMIT $limit OFFSET $offset;";
+        $result = Common::execQuery($sql, array());
+        $response = new Response();
+        if($result[0]){
+            $result = $response->object_to_array($result[1]);
+            foreach ($result as $key => $row) {
+               $result_attribues = Common::getSubscriberAttributeValues('', $row['id'], $attributes);
+               $result[$key] = array_merge($row, $result_attribues);
+            }
+            $response->setData('Subscribers', $result);
+        }else{
+            $response->setError($result[1]['code'], $result[1]['message']);
+        }
+        $response->output();
+    }
+
+
 }
